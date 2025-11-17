@@ -2,3 +2,4 @@ streamlit
 audio-recorder-streamlit
 pyttsx3
 openai
+gTTS
