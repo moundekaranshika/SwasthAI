@@ -13,5 +13,3 @@ Prototype supports text-based chat + voice responses.
 
 ---
 
-## 🚀 How to Run (Locally)
-1. Clone the repository:
