@@ -3,3 +3,4 @@ audio-recorder-streamlit
 pyttsx3
 openai
 gTTS
+streamlit_mic_recorder
