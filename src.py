@@ -1,78 +1,83 @@
 import streamlit as st
-import speech_recognition as sr
-import pyttsx3
+from streamlit_mic_recorder import mic_recorder
 import openai
+import base64
 
-# ------------------------- CONFIG -------------------------
-openai.api_key = "YOUR_API_KEY_HERE"
+openai.api_key = "YOUR_API_KEY"
 
-# Initialize TTS engine
-engine = pyttsx3.init()
-engine.setProperty("rate", 165)
+st.title("🎙️ SwasthAI – Voice Based Health Assistant")
+st.write("Speak your symptoms and get helpful suggestions.")
 
-# ------------------------- UI ------------------------------
-st.set_page_config(page_title="SwasthAI - Voice Health Companion", layout="centered")
+# ---------- RECORD AUDIO ----------
+audio = mic_recorder(
+    start_prompt="🎤 Click to start recording",
+    stop_prompt="⏹ Stop",
+    key="record"
+)
 
-st.title("🎙️ SwasthAI - Voice-Based Health Assistant")
-st.write("Speak your symptoms and get AI-powered medical suggestions.")
+if audio:
+    st.audio(audio["bytes"], format="audio/wav")
 
-# ------------------------- RECORD AUDIO --------------------
-def transcribe_speech():
-    r = sr.Recognizer()
+    st.info("🔍 Transcribing your audio...")
 
-    with sr.Microphone() as source:
-        st.info("🎤 Listening... Speak now.")
-        r.adjust_for_ambient_noise(source)
-        audio = r.listen(source)
+    # Convert bytes to base64 for Whisper API
+    b64_audio = base64.b64encode(audio["bytes"]).decode("utf-8")
 
-    try:
-        text = r.recognize_google(audio)
-        st.success(f"You said: **{text}**")
-        return text
+    whisper_resp = openai.chat.completions.create(
+        model="gpt-4o-mini-tts",
+        modalities=["text"],
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "input_audio", 
+                     "input_audio": {"data": b64_audio, "format": "wav"}
+                    },
+                    {"type": "text", "text": "Transcribe this medical speech."}
+                ]
+            }
+        ]
+    )
 
-    except Exception as e:
-        st.error("Sorry, I could not understand your voice. Try again.")
-        return None
+    text = whisper_resp.choices[0].message.content
+    st.success(f"🗣 You said: **{text}**")
 
-# ------------------------- AI RESPONSE ----------------------
-def get_medical_suggestion(symptoms):
+    # ---------- MEDICAL SUGGESTION ----------
+    st.info("🧠 Analyzing symptoms...")
+
     prompt = f"""
-    You are a medical assistant for elderly people.
-    The user says: {symptoms}
-    Provide:
+    You are a simple medical advisor for elderly people. 
+    The user says: {text}
+    Give:
     - Possible cause (simple words)
     - Home remedies
-    - When to visit a doctor
-    - Warning signs
-    Keep it short and easy.
+    - When they should visit a doctor
+    - Red warning signs
+    Keep response short and easy.
     """
 
     response = openai.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
-    
-    return response.choices[0].message["content"]
 
-# ------------------------- TEXT TO SPEECH -------------------
-def speak(text):
-    try:
-        engine.say(text)
-        engine.runAndWait()
-    except:
-        st.warning("Audio playback failed, showing text only.")
+    suggestion = response.choices[0].message["content"]
 
-# ------------------------- APP LOGIC -------------------------
-st.subheader("Click to Speak")
+    st.subheader("🩺 SwasthAI Suggestion:")
+    st.write(suggestion)
 
-if st.button("🎤 Start Recording"):
-    spoken_text = transcribe_speech()
+    # ---------- AI SPEAKING (OPTIONAL) ----------
+    speak = st.button("🔊 Play Audio Response")
 
-    if spoken_text:
-        with st.spinner("Analyzing your symptoms..."):
-            answer = get_medical_suggestion(spoken_text)
+    if speak:
+        st.info("Generating audio...")
 
-        st.subheader("🩺 SwasthAI Suggestion:")
-        st.write(answer)
+        tts = openai.audio.speech.create(
+            model="gpt-4o-mini-tts",
+            voice="alloy",
+            input=suggestion
+        )
 
-        speak(answer)
+        audio_bytes = tts.read()
+        st.audio(audio_bytes, format="audio/mp3")
+
