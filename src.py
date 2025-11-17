@@ -1,26 +1,30 @@
 import streamlit as st
-import speech_recognition as sr
+from audio_recorder_streamlit import audio_recorder
 import pyttsx3
-
-# Initialize text-to-speech
-engine = pyttsx3.init()
+import tempfile
+import openai
+import os
 
 # Title
 st.title("🩺 SwasthAI - Elderly Health Companion")
 st.write("A voice-based AI assistant for healthcare access and elderly support.")
 
-# Record voice input
-r = sr.Recognizer()
+# Browser audio recorder
+audio_bytes = audio_recorder(text="🎤 Speak", recording_color="#ff0000", neutral_color="#999999")
 
-if st.button("🎤 Speak"):
-    with sr.Microphone() as source:
-        st.info("Listening...")
-        audio = r.listen(source)
-        try:
-            text = r.recognize_google(audio)
-            st.success(f"You said: {text}")
-        except:
-            st.error("Sorry, I couldn’t understand you.")
+# Convert speech to text using Whisper API
+def transcribe_audio(audio_bytes):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as f:
+        f.write(audio_bytes)
+        file_path = f.name
+
+    audio_file = open(file_path, "rb")
+    transcript = openai.audio.transcriptions.create(
+        model="gpt-4o-mini-tts",
+        file=audio_file
+    )
+
+    return transcript.text
 
 # Simulated AI response
 def ai_response(text):
@@ -34,9 +38,18 @@ def ai_response(text):
     else:
         return "I'm here to help you with health guidance. Can you tell me your symptoms?"
 
-# Get response
-if 'text' in locals():
+# Text-to-speech
+engine = pyttsx3.init()
+
+if audio_bytes:
+    st.audio(audio_bytes, format="audio/wav")
+    st.info("Transcribing...")
+
+    text = transcribe_audio(audio_bytes)
+    st.success(f"🗣️ You said: **{text}**")
+
     response = ai_response(text)
     st.write(f"🤖 **SwasthAI:** {response}")
+
     engine.say(response)
     engine.runAndWait()
