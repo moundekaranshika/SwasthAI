@@ -1,9 +1,10 @@
 import streamlit as st
 from streamlit_mic_recorder import mic_recorder
-import openai
 import base64
+from openai import OpenAI
 
-openai.api_key = "YOUR_API_KEY"
+# Load API key safely from Streamlit secrets
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.title("🎙️ SwasthAI – Voice Based Health Assistant")
 st.write("Speak your symptoms and get helpful suggestions.")
@@ -20,26 +21,28 @@ if audio:
 
     st.info("🔍 Transcribing your audio...")
 
-    # Convert bytes to base64 for Whisper API
+    # Convert bytes to base64
     b64_audio = base64.b64encode(audio["bytes"]).decode("utf-8")
 
-    whisper_resp = openai.chat.completions.create(
+    # --------- TRANSCRIPTION USING GPT-4o audio ---------
+    whisper_resp = client.chat.completions.create(
         model="gpt-4o-mini-tts",
         modalities=["text"],
         messages=[
             {
                 "role": "user",
                 "content": [
-                    {"type": "input_audio", 
-                     "input_audio": {"data": b64_audio, "format": "wav"}
+                    {
+                        "type": "input_audio",
+                        "input_audio": {"data": b64_audio, "format": "wav"}
                     },
                     {"type": "text", "text": "Transcribe this medical speech."}
-                ]
+                ],
             }
-        ]
+        ],
     )
 
-    text = whisper_resp.choices[0].message.content
+    text = whisper_resp.choices[0].message["content"]
     st.success(f"🗣 You said: **{text}**")
 
     # ---------- MEDICAL SUGGESTION ----------
@@ -53,10 +56,10 @@ if audio:
     - Home remedies
     - When they should visit a doctor
     - Red warning signs
-    Keep response short and easy.
+    Keep response short, clear, soft, and friendly.
     """
 
-    response = openai.chat.completions.create(
+    response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}]
     )
@@ -66,13 +69,13 @@ if audio:
     st.subheader("🩺 SwasthAI Suggestion:")
     st.write(suggestion)
 
-    # ---------- AI SPEAKING (OPTIONAL) ----------
+    # ---------- AI SPEAKING ----------
     speak = st.button("🔊 Play Audio Response")
 
     if speak:
         st.info("Generating audio...")
 
-        tts = openai.audio.speech.create(
+        tts = client.audio.speech.create(
             model="gpt-4o-mini-tts",
             voice="alloy",
             input=suggestion
@@ -80,4 +83,5 @@ if audio:
 
         audio_bytes = tts.read()
         st.audio(audio_bytes, format="audio/mp3")
+
 
