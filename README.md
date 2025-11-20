@@ -5,11 +5,11 @@ Prototype supports text-based chat + voice responses.
 ---
 
 ## ⭐ Features
-- AI-generated healthcare guidance  
-- Rule-based symptom responses (fever, headache, medicine, emergency)  
-- Voice output using gTTS  
-- Simple interactive chat loop  
-- Runs in Google Colab or locally  
+Record audio directly in the browser
+Transcribe speech using OpenAI Whisper API
+Generate suggestions using OpenAI GPT APIs
+Clean UI built using Streamlit
+Secure API key handling with environment variables (.env)
 
 ---
 
