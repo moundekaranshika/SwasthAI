@@ -10,6 +10,10 @@ Prototype supports text-based chat + voice responses.
 -- Generate suggestions using OpenAI GPT APIs
 -- Clean UI built using Streamlit
 -- Secure API key handling with environment variables (.env)
+- Voice-based input and response
+- Basic healthcare symptom guidance
+- Multilingual and accessible interface (planned)
+- Prototype built using Streamlit and Python
 
 ---
 
